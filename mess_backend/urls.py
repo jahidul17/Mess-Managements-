@@ -26,7 +26,7 @@ urlpatterns = [
     path('api/members/',include('members.urls')),
     path('api/meals/',include('meals.urls')),
     path('api/charges/',include('charges.urls')),
-    
+    path('api/bills',include('billing.urls')),
     path('api/token/', TokenObtainPairView.as_view()),
     path('api/token/refresh/', TokenRefreshView.as_view()),
 ]
