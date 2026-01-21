@@ -3,20 +3,26 @@ from .models import Meal
 from .serializers import MealSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from django.utils import timezone
+from django.db.models import Sum
 
 class MealCreateView(generics.CreateAPIView):
     serializer_class = MealSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        """
-        Logged-in member er jonno auto meal create hobe
-        default meal_count = 1
-        """
-        serializer.save(
-            member=self.request.user.memberprofile
-        )
+        serializer.save(member=self.request.user.memberprofile)
+        
+        
+class MealUpdateView(generics.UpdateAPIView):
+    queryset = Meal.objects.all()
+    serializer_class = MealSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # member can update ONLY his own meals
+        return Meal.objects.filter(member=self.request.user.memberprofile)
+    
 
 class MealListView(generics.ListAPIView):
     serializer_class = MealSerializer
@@ -65,4 +71,30 @@ class MonthlyMealCountView(APIView):
         return Response({
             "month": month,
             "total_meals": count
+        })
+
+
+
+class KitchenTodayMealView(APIView):
+    permission_classes = [permissions.IsAuthenticated]  # or AllowAny if public screen
+
+    def get(self, request):
+        today = timezone.localdate()
+
+        data = Meal.objects.filter(date=today).aggregate(
+            breakfast=Sum('breakfast'),
+            lunch=Sum('lunch'),
+            dinner=Sum('dinner'),
+        )
+
+        return Response({
+            "date": today,
+            "breakfast": data['breakfast'] or 0,
+            "lunch": data['lunch'] or 0,
+            "dinner": data['dinner'] or 0,
+            "total_meal": (
+                (data['breakfast'] or 0) +
+                (data['lunch'] or 0) +
+                (data['dinner'] or 0)
+            )
         })
